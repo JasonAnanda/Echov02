@@ -6,8 +6,8 @@ public class MonsterLogic : MonoBehaviour
     public MonsterState currentState = MonsterState.WAIT;
 
     [Header("Movement Settings")]
-    public float speed = 5.0f; // x -= speed di Python
-    public float stopX = -2.0f; // Titik di mana monster berhenti untuk beraksi
+    public float speed = 2.0f; // Sesuai Python: x -= speed
+    public float startTriggerX = 0f; // Titik koordinat X saat monster mulai beraksi
 
     [Header("Rhythm Data")]
     public int beatCounter = 0;
@@ -18,22 +18,27 @@ public class MonsterLogic : MonoBehaviour
 
     void Update()
     {
-        // Logika pergerakan x -= speed (Hanya bergerak jika belum sampai target)
-        if (transform.position.x > stopX)
-        {
-            transform.Translate(Vector3.left * speed * Time.deltaTime);
-        }
-        else if (!_hasStarted)
+        // MONSTER JALAN TERUS (Tanpa syarat stopX)
+        transform.Translate(Vector3.left * speed * Time.deltaTime);
+
+        // Memicu fase aksi jika melewati titik tertentu, tapi tetap jalan terus
+        if (!_hasStarted && transform.position.x <= startTriggerX)
         {
             _hasStarted = true;
             currentState = MonsterState.DEMO;
-            Debug.Log("Monster Arrived: Phase DEMO Starts");
+            Debug.Log("Monster reached trigger point: Phase DEMO Starts");
+        }
+
+        // Hapus monster jika sudah terlalu jauh ke kiri (keluar layar)
+        if (transform.position.x < -15f)
+        {
+            Destroy(gameObject);
         }
     }
 
     void UpdateMonsterBeat(int systemBeat)
     {
-        // Logika State Machine berdasarkan ketukan (Beat)
+        // Logika State Machine berjalan di latar belakang sambil monster bergerak
         if (!_hasStarted) return;
 
         beatCounter++;
@@ -41,18 +46,17 @@ public class MonsterLogic : MonoBehaviour
         switch (currentState)
         {
             case MonsterState.DEMO:
-                // Di sini nanti kita panggil PlayCue() untuk memberi contoh suara
                 if (beatCounter >= 4) { currentState = MonsterState.SIGNAL; beatCounter = 0; }
                 break;
 
             case MonsterState.SIGNAL:
-                // Jeda singkat sebelum giliran pemain
                 if (beatCounter >= 2) { currentState = MonsterState.USER; beatCounter = 0; }
                 break;
 
             case MonsterState.USER:
-                // Di sini kita cek input pemain
-                if (beatCounter >= 4) { Destroy(gameObject); } // Monster pergi setelah selesai
+                // Di sini nanti kita cek input pemain
+                // Monster tidak hancur di sini, tapi di pengecekan posisi X (Update)
+                if (beatCounter >= 4) { Debug.Log("Monster Phase Finished"); }
                 break;
         }
     }

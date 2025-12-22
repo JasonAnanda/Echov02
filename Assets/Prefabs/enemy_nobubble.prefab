@@ -98,6 +98,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentState: 0
-  speed: 3
-  stopX: 1
+  speed: 2
+  startTriggerX: 0
   beatCounter: 0
