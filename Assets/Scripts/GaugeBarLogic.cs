@@ -1,26 +1,29 @@
 using UnityEngine;
-using UnityEngine.UI; // Wajib ada untuk mengakses komponen UI
+using UnityEngine.UI; // Wajib untuk Slider
 
 public class GaugeBarLogic : MonoBehaviour
 {
-    private Image _gaugeImage;
+    private Slider _gaugeSlider;
 
     void Start()
     {
-        // Mengambil komponen Image yang ada di objek ini secara otomatis
-        _gaugeImage = GetComponent<Image>();
+        // SEBELUMNYA: GetComponent<Image>()
+        // SEKARANG: Mencari komponen Slider
+        _gaugeSlider = GetComponent<Slider>();
+
+        if (_gaugeSlider != null)
+        {
+            _gaugeSlider.minValue = 0f;
+            _gaugeSlider.maxValue = 1f;
+        }
     }
 
     void Update()
     {
-        if (_gaugeImage != null)
+        if (_gaugeSlider != null)
         {
-            // Update tampilan bar berdasarkan nilai di GlobalData (0f - 1f)
-            // FillAmount 0 = Kosong, FillAmount 1 = Penuh
-            _gaugeImage.fillAmount = GlobalData.gauge;
-
-            // Efek Warna (Opsional): Semakin penuh semakin menyala merahnya
-            _gaugeImage.color = Color.Lerp(Color.yellow, Color.red, GlobalData.gauge);
+            // Update nilai slider (0.0 sampai 1.0) dari GlobalData
+            _gaugeSlider.value = GlobalData.gauge;
         }
     }
 }
