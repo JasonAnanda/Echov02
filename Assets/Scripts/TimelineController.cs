@@ -9,12 +9,11 @@ public class TimelineController : MonoBehaviour
     public GameObject prefabA;
     public GameObject prefabY;
 
-    // --- TAMBAHAN UNTUK KALIBRASI POSISI ---
     [Header("Visual Alignment")]
-    public float yOffset = 0f;
-    // -----------------------------------------------------------
+    public float noteYOffset = 0f;    // Offset untuk Diamond/Notes
+    public float cursorYOffset = 0f;  // Offset khusus untuk Kursor
 
-    private float _noteSpacing = 120f; // Sesuai NOTE_SPACING di Python
+    private float _noteSpacing = 120f;
     private List<GameObject> _activeNotes = new List<GameObject>();
 
     public void SpawnPattern(string[] command)
@@ -32,8 +31,8 @@ public class TimelineController : MonoBehaviour
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 RectTransform rt = note.GetComponent<RectTransform>();
 
-                // Gunakan yOffset agar diamond turun ke arah garis
-                rt.anchoredPosition = new Vector2(i * _noteSpacing, yOffset);
+                // Diamond menggunakan noteYOffset
+                rt.anchoredPosition = new Vector2(i * _noteSpacing, noteYOffset);
                 _activeNotes.Add(note);
             }
         }
@@ -44,15 +43,15 @@ public class TimelineController : MonoBehaviour
         foreach (GameObject n in _activeNotes) Destroy(n);
         _activeNotes.Clear();
 
-        // Reset kursor ke posisi awal dengan menghormati yOffset
-        cursor.anchoredPosition = new Vector2(0, yOffset);
+        // Reset kursor ke awal dengan cursorYOffset
+        cursor.anchoredPosition = new Vector2(0, cursorYOffset);
     }
 
     public void UpdateCursor(float progress)
     {
         float targetX = progress * (6 * _noteSpacing);
 
-        // Gunakan yOffset agar kursor sejajar dengan diamond dan garis
-        cursor.anchoredPosition = new Vector2(targetX, yOffset);
+        // Kursor menggunakan cursorYOffset agar tidak melayang
+        cursor.anchoredPosition = new Vector2(targetX, cursorYOffset);
     }
 }
