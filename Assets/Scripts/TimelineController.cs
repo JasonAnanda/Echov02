@@ -8,7 +8,9 @@ public class TimelineController : MonoBehaviour
     public Transform noteSpawnPoint;
     public GameObject prefabA;
     public GameObject prefabY;
-    public GameObject canvasTimeline; // Tarik TimeLineContainer ke sini
+
+    [Tooltip("Pastikan ini adalah Parent Utama dari seluruh elemen Timeline (Bar, Diamond, Cursor)")]
+    public GameObject canvasTimeline;
 
     [Header("Visual Alignment")]
     public float noteYOffset = 0f;
@@ -24,25 +26,30 @@ public class TimelineController : MonoBehaviour
 
     void Start()
     {
-        // Sembunyikan UI saat awal permainan
-        if (canvasTimeline != null) canvasTimeline.SetActive(false);
+        // Sembunyikan saat awal
+        ShowTimeline(false);
     }
 
-    // --- UPDATE: Fungsi ShowTimeline dengan log debug ---
     public void ShowTimeline(bool show)
     {
         if (canvasTimeline != null)
         {
             canvasTimeline.SetActive(show);
-            // Debug untuk memastikan fungsi terpanggil oleh MonsterLogic
-            Debug.Log("Timeline Display: " + show);
+
+            // PAKSA Canvas untuk merender ulang (Rebuild) agar tidak "ghosting" atau tetap transparan
+            if (show) LayoutRebuilder.ForceRebuildLayoutImmediate(canvasTimeline.GetComponent<RectTransform>());
+
+            Debug.Log("<color=green>Timeline Logic:</color> Show is " + show);
+        }
+        else
+        {
+            Debug.LogError("<color=red>Timeline Error:</color> Slot 'Canvas Timeline' di Inspector masih KOSONG!");
         }
     }
 
-    // --- UPDATE: SpawnPattern dengan alur aktivasi UI yang benar ---
     public void SpawnPattern(string[] command)
     {
-        // 1. Pastikan UI Aktif DULU sebelum modifikasi agar RectTransform terbaca benar
+        // Panggil ShowTimeline di awal agar instruksi Instantiate di bawahnya memiliki konteks Parent yang aktif
         ShowTimeline(true);
 
         ClearTimeline();
@@ -55,10 +62,12 @@ public class TimelineController : MonoBehaviour
 
             if (prefabToSpawn != null)
             {
+                // Gunakan noteSpawnPoint sebagai parent
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 RectTransform rt = note.GetComponent<RectTransform>();
 
-                // Set posisi menggunakan noteYOffset yang sudah stabil
+                // Pastikan Scale kembali ke 1,1,1 (Seringkali Instantiate di UI merubah scale jadi aneh)
+                rt.localScale = Vector3.one;
                 rt.anchoredPosition = new Vector2(i * _noteSpacing, noteYOffset);
                 _activeNotes.Add(note);
             }
@@ -67,17 +76,16 @@ public class TimelineController : MonoBehaviour
 
     public void ClearTimeline()
     {
-        foreach (GameObject n in _activeNotes) Destroy(n);
+        foreach (GameObject n in _activeNotes) if (n != null) Destroy(n);
         _activeNotes.Clear();
         _currentProgress = 0;
         _targetProgress = 0;
-        cursor.anchoredPosition = new Vector2(0, cursorYOffset);
+        if (cursor != null) cursor.anchoredPosition = new Vector2(0, cursorYOffset);
     }
 
     void Update()
     {
-        // SmoothDamp tetap dipertahankan agar pergerakan kursor tidak patah-patah
-        if (canvasTimeline != null && canvasTimeline.activeSelf)
+        if (canvasTimeline != null && canvasTimeline.activeInHierarchy)
         {
             _currentProgress = Mathf.SmoothDamp(_currentProgress, _targetProgress, ref _smoothVelocity, 0.05f);
             float targetX = _currentProgress * (6 * _noteSpacing);
