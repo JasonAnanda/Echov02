@@ -1,7 +1,12 @@
+using UnityEngine;
+
 public static class GlobalData
 {
     // Variabel yang bisa berubah
     public static float gauge = 0f;
+
+    // Monster yang sedang dipilih
+    public static GameObject currentTarget;
 
     // Konstanta (Tetap/Settings)
     public const float SMALL_FAIL = 0.10f;
