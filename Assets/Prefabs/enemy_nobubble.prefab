@@ -98,6 +98,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentState: 0
+  monsterType: A
+  patternId: 0
   speed: 2
   startTriggerX: 0
   beatCounter: 0
+  command: []
+  signalDuration: 2

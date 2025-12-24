@@ -3,24 +3,21 @@ using System.Collections.Generic;
 
 public class TargetSelector : MonoBehaviour
 {
-    private List<GameObject> _enemies = new List<GameObject>();
     private int _currentIndex = -1;
 
     void Update()
     {
-        // 1. Ambil semua monster yang ada di scene (yang memiliki tag "Enemy")
+        // Mencari semua monster dengan Tag "Enemy"
         GameObject[] foundEnemies = GameObject.FindGameObjectsWithTag("Enemy");
-
-        // 2. Deteksi Input D-Pad (Left/Right)
-        // Horizontal pada D-Pad biasanya terbaca sebagai Axis
         float dPadInput = Input.GetAxisRaw("Horizontal");
 
-        if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.Space)) // Tombol A untuk Lock-On
+        // Tombol A Joystick atau Spasi untuk Confirm
+        if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.Space))
         {
             ConfirmSelection();
         }
 
-        // Logika pindah target (Sederhana)
+        // Navigasi target menggunakan D-Pad atau Keyboard Arrow
         if (Input.GetKeyDown(KeyCode.RightArrow) || dPadInput > 0.5f)
         {
             SwitchTarget(1, foundEnemies);
@@ -35,6 +32,7 @@ public class TargetSelector : MonoBehaviour
     {
         if (foundEnemies.Length == 0) return;
 
+        // Memastikan index tidak keluar dari jumlah musuh yang ada
         _currentIndex = Mathf.Clamp(_currentIndex + direction, 0, foundEnemies.Length - 1);
         GlobalData.currentTarget = foundEnemies[_currentIndex];
 
@@ -46,9 +44,10 @@ public class TargetSelector : MonoBehaviour
         if (GlobalData.currentTarget != null)
         {
             MonsterLogic ml = GlobalData.currentTarget.GetComponent<MonsterLogic>();
-            if (ml != null && ml.currentPhase == MonsterLogic.Phase.Wait)
+
+            // Menggunakan currentState dan MonsterState sesuai script MonsterLogic stabil
+            if (ml != null && ml.currentState == MonsterLogic.MonsterState.WAIT)
             {
-                // Memulai Fase Demo seperti di Python
                 ml.StartSequence();
             }
         }
