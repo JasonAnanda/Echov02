@@ -9,10 +9,14 @@ public class TimelineController : MonoBehaviour
     public GameObject prefabA;
     public GameObject prefabY;
 
+    // --- TAMBAHAN UNTUK KALIBRASI POSISI ---
+    [Header("Visual Alignment")]
+    public float yOffset = 0f;
+    // -----------------------------------------------------------
+
     private float _noteSpacing = 120f; // Sesuai NOTE_SPACING di Python
     private List<GameObject> _activeNotes = new List<GameObject>();
 
-    // Fungsi untuk memunculkan visual pola (Dipanggil saat Monster PHASE_DEMO)
     public void SpawnPattern(string[] command)
     {
         ClearTimeline();
@@ -21,15 +25,15 @@ public class TimelineController : MonoBehaviour
         {
             GameObject prefabToSpawn = null;
             if (command[i] == "A") prefabToSpawn = prefabA;
-            else if (command[i] == "W") prefabToSpawn = prefabY; // W di Python jadi Y
+            else if (command[i] == "Y" || command[i] == "W") prefabToSpawn = prefabY;
 
             if (prefabToSpawn != null)
             {
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 RectTransform rt = note.GetComponent<RectTransform>();
 
-                // Atur posisi horizontal berdasarkan index pola
-                rt.anchoredPosition = new Vector2(i * _noteSpacing, 0);
+                // Gunakan yOffset agar diamond turun ke arah garis
+                rt.anchoredPosition = new Vector2(i * _noteSpacing, yOffset);
                 _activeNotes.Add(note);
             }
         }
@@ -39,14 +43,16 @@ public class TimelineController : MonoBehaviour
     {
         foreach (GameObject n in _activeNotes) Destroy(n);
         _activeNotes.Clear();
-        cursor.anchoredPosition = Vector2.zero; // Reset kursor ke awal
+
+        // Reset kursor ke posisi awal dengan menghormati yOffset
+        cursor.anchoredPosition = new Vector2(0, yOffset);
     }
 
     public void UpdateCursor(float progress)
     {
-        // Progress adalah 0.0 sampai 1.0 (satu putaran pola)
-        // Total panjang bar = jumlah beat * spacing
         float targetX = progress * (6 * _noteSpacing);
-        cursor.anchoredPosition = new Vector2(targetX, 0);
+
+        // Gunakan yOffset agar kursor sejajar dengan diamond dan garis
+        cursor.anchoredPosition = new Vector2(targetX, yOffset);
     }
 }

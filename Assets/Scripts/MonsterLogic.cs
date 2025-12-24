@@ -13,6 +13,11 @@ public class MonsterLogic : MonoBehaviour
     public float speed = 2.0f;
     public float startTriggerX = 0f;
 
+    [Header("Bounce Settings")]
+    public float bounceHeight = 0.3f;
+    private float _baseY;
+    private int _moveState = 1; // 1 = Mulai di atas (kebalikan player yang mulai di 0)
+
     [Header("Rhythm Data")]
     public int beatCounter = 0;
     private bool _hasStarted = false;
@@ -21,17 +26,18 @@ public class MonsterLogic : MonoBehaviour
     public string[] command;
     public int signalDuration = 2;
 
-    // --- SESUAI PYTHON: SUARA BERDASARKAN PATTERN_ID ---
-    [Header("Audio Settings (Python PATTERN_SOUNDS)")]
+    [Header("Audio Settings (Python Style)")]
     public AudioSource monsterVoice;
-    public AudioClip pattern1Sound; // Suara pola 1 utuh
-    public AudioClip pattern2Sound; // Suara pola 2 utuh
-    public AudioClip pattern3Sound; // Suara pola 3 utuh
-    public AudioClip pattern4Sound; // Suara pola 4 utuh (Type C)
+    public AudioClip pattern1Sound;
+    public AudioClip pattern2Sound;
+    public AudioClip pattern3Sound;
+    public AudioClip pattern4Sound;
 
     void Start()
     {
         InitializePattern();
+        // Simpan posisi Y awal agar bounce tetap konsisten saat bergerak maju
+        _baseY = transform.position.y;
     }
 
     void InitializePattern()
@@ -57,7 +63,12 @@ public class MonsterLogic : MonoBehaviour
 
     void Update()
     {
+        // Gerakan horizontal tetap menggunakan transform.Translate
         transform.Translate(Vector3.left * speed * Time.deltaTime);
+
+        // Update posisi Y secara terpisah berdasarkan _moveState
+        float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
+        transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
 
         if (!_hasStarted && transform.position.x <= startTriggerX)
         {
@@ -91,19 +102,15 @@ public class MonsterLogic : MonoBehaviour
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
             if (tc != null) tc.SpawnPattern(command);
 
-            // --- DUPLIKASI PYTHON: play_voice() dipanggil saat sequence mulai ---
             PlayVoice();
-
             Debug.Log($"Monster {monsterType} Start: Pattern {patternId}");
         }
     }
 
-    // --- DUPLIKASI 100% LOGIKA play_voice() PYTHON ---
     void PlayVoice()
     {
         if (monsterVoice == null) return;
-
-        monsterVoice.Stop(); // PATTERN_SOUNDS[id].stop()
+        monsterVoice.Stop();
 
         AudioClip clipToPlay = null;
         if (patternId == 1) clipToPlay = pattern1Sound;
@@ -114,12 +121,20 @@ public class MonsterLogic : MonoBehaviour
         if (clipToPlay != null)
         {
             monsterVoice.clip = clipToPlay;
-            monsterVoice.Play(); // PATTERN_SOUNDS[id].play()
+            monsterVoice.Play();
         }
     }
 
     void UpdateMonsterBeat(int systemBeat)
     {
+        // LOGIKA BOUNCE: Berlawanan dengan Player
+        // Kita gunakan systemBeat (0 atau 1) yang dikirim dari RhythmManager
+        if (systemBeat == 0)
+        {
+            // Jika player pindah ke 1 (atas), monster pindah ke 0 (bawah) atau sebaliknya
+            _moveState = (_moveState == 0) ? 1 : 0;
+        }
+
         if (!_hasStarted) return;
 
         beatCounter++;
@@ -129,11 +144,9 @@ public class MonsterLogic : MonoBehaviour
             case MonsterState.DEMO:
                 if (beatCounter >= 6) { currentState = MonsterState.SIGNAL; beatCounter = 0; }
                 break;
-
             case MonsterState.SIGNAL:
                 if (beatCounter >= signalDuration) { currentState = MonsterState.USER; beatCounter = 0; }
                 break;
-
             case MonsterState.USER:
                 if (beatCounter >= 6) { Debug.Log("User Phase Finished"); }
                 break;
