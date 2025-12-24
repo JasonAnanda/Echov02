@@ -16,7 +16,7 @@ public class MonsterLogic : MonoBehaviour
     [Header("Bounce Settings")]
     public float bounceHeight = 0.3f;
     private float _baseY;
-    private int _moveState = 1; // 1 = Mulai di atas (kebalikan player yang mulai di 0)
+    private int _moveState = 1;
 
     [Header("Rhythm Data")]
     public int beatCounter = 0;
@@ -33,10 +33,13 @@ public class MonsterLogic : MonoBehaviour
     public AudioClip pattern3Sound;
     public AudioClip pattern4Sound;
 
+    // --- UPDATE: SUARA CUE TURN PLAYER ---
+    public AudioClip cueSound;
+    // ----------------------------------------------
+
     void Start()
     {
         InitializePattern();
-        // Simpan posisi Y awal agar bounce tetap konsisten saat bergerak maju
         _baseY = transform.position.y;
     }
 
@@ -63,10 +66,8 @@ public class MonsterLogic : MonoBehaviour
 
     void Update()
     {
-        // Gerakan horizontal tetap menggunakan transform.Translate
         transform.Translate(Vector3.left * speed * Time.deltaTime);
 
-        // Update posisi Y secara terpisah berdasarkan _moveState
         float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
         transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
 
@@ -75,11 +76,12 @@ public class MonsterLogic : MonoBehaviour
             StartSequence();
         }
 
-        if (_hasStarted && (currentState == MonsterState.DEMO || currentState == MonsterState.USER))
+        if (_hasStarted && (currentState == MonsterState.DEMO || currentState == MonsterState.USER || currentState == MonsterState.SIGNAL))
         {
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
             if (tc != null)
             {
+                // Progress kursor tetap berjalan selama fase DEMO, SIGNAL, dan USER
                 float progress = beatCounter / 6f;
                 tc.UpdateCursor(progress);
             }
@@ -100,6 +102,7 @@ public class MonsterLogic : MonoBehaviour
             beatCounter = 0;
 
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+            // Timeline ditampilkan SEGERA saat DEMO dimulai
             if (tc != null) tc.SpawnPattern(command);
 
             PlayVoice();
@@ -127,11 +130,8 @@ public class MonsterLogic : MonoBehaviour
 
     void UpdateMonsterBeat(int systemBeat)
     {
-        // LOGIKA BOUNCE: Berlawanan dengan Player
-        // Kita gunakan systemBeat (0 atau 1) yang dikirim dari RhythmManager
         if (systemBeat == 0)
         {
-            // Jika player pindah ke 1 (atas), monster pindah ke 0 (bawah) atau sebaliknya
             _moveState = (_moveState == 0) ? 1 : 0;
         }
 
@@ -142,13 +142,35 @@ public class MonsterLogic : MonoBehaviour
         switch (currentState)
         {
             case MonsterState.DEMO:
-                if (beatCounter >= 6) { currentState = MonsterState.SIGNAL; beatCounter = 0; }
+                // Sesuai Python: Setelah DEMO selesai, SIGNAL dimulai pada beat yang sama
+                if (beatCounter >= 6)
+                {
+                    currentState = MonsterState.SIGNAL;
+                    beatCounter = 0;
+
+                    // FIX: Cue Sound diputar DI AWAL SIGNAL agar tidak lambat
+                    if (monsterVoice != null && cueSound != null)
+                        monsterVoice.PlayOneShot(cueSound);
+                }
                 break;
+
             case MonsterState.SIGNAL:
-                if (beatCounter >= signalDuration) { currentState = MonsterState.USER; beatCounter = 0; }
+                if (beatCounter >= signalDuration)
+                {
+                    currentState = MonsterState.USER;
+                    beatCounter = 0;
+                }
                 break;
+
             case MonsterState.USER:
-                if (beatCounter >= 6) { Debug.Log("User Phase Finished"); }
+                if (beatCounter >= 6)
+                {
+                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+                    if (tc != null) tc.ShowTimeline(false);
+
+                    Debug.Log("User Phase Finished");
+                    _hasStarted = false;
+                }
                 break;
         }
     }

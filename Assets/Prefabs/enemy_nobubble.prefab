@@ -103,6 +103,7 @@ MonoBehaviour:
   patternId: 0
   speed: 2
   startTriggerX: 0
+  bounceHeight: 0.3
   beatCounter: 0
   command: []
   signalDuration: 2
@@ -111,6 +112,7 @@ MonoBehaviour:
   pattern2Sound: {fileID: 8300000, guid: ad795278c8aa41a4caac0ad188cf8f76, type: 3}
   pattern3Sound: {fileID: 8300000, guid: ec3bab94d1643a745b9e5a372854ae79, type: 3}
   pattern4Sound: {fileID: 8300000, guid: 64da8ef60e456764b9cc3b6e71b7cdb4, type: 3}
+  cueSound: {fileID: 8300000, guid: bed570e5c19745f40a34a782146c775f, type: 3}
 --- !u!82 &1619933135898679513
 AudioSource:
   m_ObjectHideFlags: 0
