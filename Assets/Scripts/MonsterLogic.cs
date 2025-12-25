@@ -155,7 +155,7 @@ public class MonsterLogic : MonoBehaviour
                     {
                         // Durasi 6 beat fase USER. 
                         // Jika interval beat adalah 0.5 detik, maka durasi meluncur adalah 3 detik.
-                        float beatInterval = 0.5f;
+                        float beatInterval = 0.25f;
                         float totalDuration = 6 * beatInterval;
                         tc.StartManualMovement(totalDuration);
                     }
