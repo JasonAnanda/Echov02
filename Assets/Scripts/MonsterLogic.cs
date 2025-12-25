@@ -11,7 +11,7 @@ public class MonsterLogic : MonoBehaviour
 
     [Header("Movement Settings")]
     public float speed = 2.0f;
-    public float startTriggerX = 0f;
+    public float startTriggerX = 0f; // Variabel ini sekarang bisa diabaikan
 
     [Header("Bounce Settings")]
     public float bounceHeight = 0.3f;
@@ -65,18 +65,16 @@ public class MonsterLogic : MonoBehaviour
 
     void Update()
     {
+        // 1. Pergerakan monster tetap ada
         transform.Translate(Vector3.left * speed * Time.deltaTime);
 
+        // 2. Animasi melompat (bounce) tetap ada
         float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
         transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
 
-        if (!_hasStarted && transform.position.x <= startTriggerX)
-        {
-            StartSequence();
-        }
-
-        // --- UPDATE: Logika UpdateCursor dihapus karena kursor bergerak otomatis ---
-        // Kursor sekarang dikontrol secara internal oleh TimelineController setelah dipicu.
+        // --- PERBAIKAN: LOGIKA AUTO-SELECTED DIHAPUS ---
+        // Pengecekan 'transform.position.x <= startTriggerX' dihilangkan 
+        // agar monster hanya bisa jalan melalui pemicu manual (StartSequence).
 
         if (transform.position.x < -15f)
         {
@@ -86,6 +84,7 @@ public class MonsterLogic : MonoBehaviour
 
     public void StartSequence()
     {
+        // Sekarang StartSequence hanya berjalan jika dipanggil oleh TargetSelector pemain
         if (!_hasStarted)
         {
             _hasStarted = true;
@@ -93,11 +92,10 @@ public class MonsterLogic : MonoBehaviour
             beatCounter = 0;
 
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-            // Munculkan pola diamond, tapi kursor jangan jalan dulu
             if (tc != null) tc.SpawnPattern(command);
 
             PlayVoice();
-            Debug.Log($"Monster {monsterType} Start: Pattern {patternId}");
+            Debug.Log($"Monster {monsterType} Selected Manually: Pattern {patternId}");
         }
     }
 
@@ -149,12 +147,10 @@ public class MonsterLogic : MonoBehaviour
                     currentState = MonsterState.USER;
                     beatCounter = 0;
 
-                    // --- UPDATE: Kursor MULAI meluncur saat gilirian PLAYER (Linear) ---
                     TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
                     if (tc != null)
                     {
-                        // Durasi 6 beat fase USER. 
-                        // Jika interval beat adalah 0.5 detik, maka durasi meluncur adalah 3 detik.
+                        // Sync ke 240 BPM (0.25 detik per beat)
                         float beatInterval = 0.25f;
                         float totalDuration = 6 * beatInterval;
                         tc.StartManualMovement(totalDuration);
@@ -165,7 +161,6 @@ public class MonsterLogic : MonoBehaviour
             case MonsterState.USER:
                 if (beatCounter >= 6)
                 {
-                    // Update: Logic ShowTimeline(false) dihapus agar timeline tetap tampil
                     Debug.Log("User Phase Finished");
                     _hasStarted = false;
                     currentState = MonsterState.WAIT;

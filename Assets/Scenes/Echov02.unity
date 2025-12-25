@@ -1749,7 +1749,7 @@ MonoBehaviour:
   prefabY: {fileID: 3473316509577836722, guid: 94b1d5bd50a41f0479ab80a4a84c776d, type: 3}
   canvasTimeline: {fileID: 1921824472}
   cursorStartX: -400
-  cursorEndX: 565
+  cursorEndX: 400
   noteYOffset: 0
   cursorYOffset: -442
 --- !u!1 &2039565006
