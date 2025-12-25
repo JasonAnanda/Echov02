@@ -35,7 +35,6 @@ public class MonsterLogic : MonoBehaviour
 
     // --- UPDATE: SUARA CUE TURN PLAYER ---
     public AudioClip cueSound;
-    // ----------------------------------------------
 
     void Start()
     {
@@ -76,16 +75,8 @@ public class MonsterLogic : MonoBehaviour
             StartSequence();
         }
 
-        if (_hasStarted && (currentState == MonsterState.DEMO || currentState == MonsterState.USER || currentState == MonsterState.SIGNAL))
-        {
-            TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-            if (tc != null)
-            {
-                // Progress kursor tetap berjalan selama fase DEMO, SIGNAL, dan USER
-                float progress = beatCounter / 6f;
-                tc.UpdateCursor(progress);
-            }
-        }
+        // --- UPDATE: Logika UpdateCursor dihapus karena kursor bergerak otomatis ---
+        // Kursor sekarang dikontrol secara internal oleh TimelineController setelah dipicu.
 
         if (transform.position.x < -15f)
         {
@@ -102,7 +93,7 @@ public class MonsterLogic : MonoBehaviour
             beatCounter = 0;
 
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-            // Timeline ditampilkan SEGERA saat DEMO dimulai
+            // Munculkan pola diamond, tapi kursor jangan jalan dulu
             if (tc != null) tc.SpawnPattern(command);
 
             PlayVoice();
@@ -142,13 +133,11 @@ public class MonsterLogic : MonoBehaviour
         switch (currentState)
         {
             case MonsterState.DEMO:
-                // Sesuai Python: Setelah DEMO selesai, SIGNAL dimulai pada beat yang sama
                 if (beatCounter >= 6)
                 {
                     currentState = MonsterState.SIGNAL;
                     beatCounter = 0;
 
-                    // FIX: Cue Sound diputar DI AWAL SIGNAL agar tidak lambat
                     if (monsterVoice != null && cueSound != null)
                         monsterVoice.PlayOneShot(cueSound);
                 }
@@ -159,17 +148,27 @@ public class MonsterLogic : MonoBehaviour
                 {
                     currentState = MonsterState.USER;
                     beatCounter = 0;
+
+                    // --- UPDATE: Kursor MULAI meluncur saat gilirian PLAYER (Linear) ---
+                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+                    if (tc != null)
+                    {
+                        // Durasi 6 beat fase USER. 
+                        // Jika interval beat adalah 0.5 detik, maka durasi meluncur adalah 3 detik.
+                        float beatInterval = 0.5f;
+                        float totalDuration = 6 * beatInterval;
+                        tc.StartManualMovement(totalDuration);
+                    }
                 }
                 break;
 
             case MonsterState.USER:
                 if (beatCounter >= 6)
                 {
-                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-                    if (tc != null) tc.ShowTimeline(false);
-
+                    // Update: Logic ShowTimeline(false) dihapus agar timeline tetap tampil
                     Debug.Log("User Phase Finished");
                     _hasStarted = false;
+                    currentState = MonsterState.WAIT;
                 }
                 break;
         }
