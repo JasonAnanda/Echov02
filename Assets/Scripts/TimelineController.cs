@@ -8,50 +8,59 @@ public class TimelineController : MonoBehaviour
     public Transform noteSpawnPoint;
     public GameObject prefabA;
     public GameObject prefabY;
-
-    [Tooltip("Pastikan ini adalah Parent Utama dari seluruh elemen Timeline (Bar, Diamond, Cursor)")]
     public GameObject canvasTimeline;
+
+    [Header("Manual Cursor Position")]
+    // Kamu bisa mengatur nilai ini di Inspector untuk menentukan posisi kursor saat mulai dan selesai
+    public float cursorStartX = -450f; // Titik paling kiri timeline kamu
+    public float cursorEndX = 450f;   // Titik paling kanan timeline kamu
 
     [Header("Visual Alignment")]
     public float noteYOffset = 0f;
     public float cursorYOffset = 0f;
 
-    [Header("Smooth Movement")]
     private float _currentProgress = 0f;
     private float _targetProgress = 0f;
     private float _smoothVelocity = 0f;
-
     private float _noteSpacing = 120f;
     private List<GameObject> _activeNotes = new List<GameObject>();
 
     void Start()
     {
-        // Sembunyikan saat awal
-        ShowTimeline(false);
+        if (canvasTimeline != null)
+        {
+            canvasTimeline.SetActive(true);
+        }
+        ResetCursor();
+    }
+
+    private void ResetCursor()
+    {
+        if (cursor != null)
+        {
+            _currentProgress = 0f;
+            _targetProgress = 0f;
+            _smoothVelocity = 0f;
+
+            // Mengatur posisi kursor ke nilai Start yang kamu tentukan di Inspector
+            cursor.anchoredPosition = new Vector2(cursorStartX, cursorYOffset);
+        }
+    }
+
+    public void ClearTimeline()
+    {
+        foreach (GameObject n in _activeNotes) if (n != null) Destroy(n);
+        _activeNotes.Clear();
+        ResetCursor();
     }
 
     public void ShowTimeline(bool show)
     {
-        if (canvasTimeline != null)
-        {
-            canvasTimeline.SetActive(show);
-
-            // PAKSA Canvas untuk merender ulang (Rebuild) agar tidak "ghosting" atau tetap transparan
-            if (show) LayoutRebuilder.ForceRebuildLayoutImmediate(canvasTimeline.GetComponent<RectTransform>());
-
-            Debug.Log("<color=green>Timeline Logic:</color> Show is " + show);
-        }
-        else
-        {
-            Debug.LogError("<color=red>Timeline Error:</color> Slot 'Canvas Timeline' di Inspector masih KOSONG!");
-        }
+        if (canvasTimeline != null) canvasTimeline.SetActive(true);
     }
 
     public void SpawnPattern(string[] command)
     {
-        // Panggil ShowTimeline di awal agar instruksi Instantiate di bawahnya memiliki konteks Parent yang aktif
-        ShowTimeline(true);
-
         ClearTimeline();
 
         for (int i = 0; i < command.Length; i++)
@@ -62,33 +71,24 @@ public class TimelineController : MonoBehaviour
 
             if (prefabToSpawn != null)
             {
-                // Gunakan noteSpawnPoint sebagai parent
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 RectTransform rt = note.GetComponent<RectTransform>();
-
-                // Pastikan Scale kembali ke 1,1,1 (Seringkali Instantiate di UI merubah scale jadi aneh)
                 rt.localScale = Vector3.one;
+                // Posisi Note tetap relatif terhadap NoteSpawnPoint
                 rt.anchoredPosition = new Vector2(i * _noteSpacing, noteYOffset);
                 _activeNotes.Add(note);
             }
         }
     }
 
-    public void ClearTimeline()
-    {
-        foreach (GameObject n in _activeNotes) if (n != null) Destroy(n);
-        _activeNotes.Clear();
-        _currentProgress = 0;
-        _targetProgress = 0;
-        if (cursor != null) cursor.anchoredPosition = new Vector2(0, cursorYOffset);
-    }
-
     void Update()
     {
-        if (canvasTimeline != null && canvasTimeline.activeInHierarchy)
+        if (cursor != null)
         {
             _currentProgress = Mathf.SmoothDamp(_currentProgress, _targetProgress, ref _smoothVelocity, 0.05f);
-            float targetX = _currentProgress * (6 * _noteSpacing);
+
+            // MENGGUNAKAN LERP: Menghitung posisi kursor di antara Start dan End berdasarkan progres
+            float targetX = Mathf.Lerp(cursorStartX, cursorEndX, _currentProgress);
             cursor.anchoredPosition = new Vector2(targetX, cursorYOffset);
         }
     }
