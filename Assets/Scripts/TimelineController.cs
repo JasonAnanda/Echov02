@@ -20,9 +20,11 @@ public class TimelineController : MonoBehaviour
 
     private float _currentProgress = 0f;
     private float _noteSpacing = 120f;
+
+    // --- UPDATE: Menggunakan array untuk akses index yang pasti ---
+    private GameObject[] _noteSlots = new GameObject[6];
     private List<GameObject> _activeNotes = new List<GameObject>();
 
-    // Variabel untuk sinkronisasi waktu
     private float _startTime;
     private float _duration;
     private bool _isMoving = false;
@@ -47,13 +49,16 @@ public class TimelineController : MonoBehaviour
     {
         foreach (GameObject n in _activeNotes) if (n != null) Destroy(n);
         _activeNotes.Clear();
+
+        // Reset array slots
+        for (int i = 0; i < _noteSlots.Length; i++) _noteSlots[i] = null;
+
         ResetCursor();
     }
 
     public void SpawnPattern(string[] command)
     {
         ClearTimeline();
-        // Logika spawn tetap sama...
         for (int i = 0; i < command.Length; i++)
         {
             GameObject prefabToSpawn = (command[i] == "A") ? prefabA : (command[i] == "Y" || command[i] == "W") ? prefabY : null;
@@ -61,32 +66,50 @@ public class TimelineController : MonoBehaviour
             {
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 note.GetComponent<RectTransform>().anchoredPosition = new Vector2(i * _noteSpacing, noteYOffset);
+
                 _activeNotes.Add(note);
+                // --- UPDATE: Simpan ke slot sesuai urutan beat (0-5) ---
+                if (i < _noteSlots.Length) _noteSlots[i] = note;
             }
         }
     }
 
-    // --- UPDATE UTAMA: Gerakan Linear ---
+    // --- FIX ERROR 1: Menambahkan GetCurrentProgress ---
+    public float GetCurrentProgress()
+    {
+        return _currentProgress;
+    }
+
+    // --- FIX ERROR 2: Menambahkan MarkDiamondHit ---
+    public void MarkDiamondHit(int index)
+    {
+        if (index >= 0 && index < _noteSlots.Length && _noteSlots[index] != null)
+        {
+            // Feedback Visual: Ubah warna menjadi hijau (asumsi prefab punya komponen Image)
+            Image img = _noteSlots[index].GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = Color.green;
+            }
+            // Efek tambahan: sedikit membesar saat kena hit
+            _noteSlots[index].transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+        }
+    }
+
     void Update()
     {
         if (_isMoving && cursor != null)
         {
-            // Hitung sudah berapa lama waktu berlalu sejak musik/sequence mulai
             float elapsed = Time.time - _startTime;
-
-            // Hitung progres (0 sampai 1) secara linear berdasarkan total durasi
             _currentProgress = Mathf.Clamp01(elapsed / _duration);
 
-            // Tentukan posisi X dengan Lerp agar sangat halus (60+ FPS)
             float targetX = Mathf.Lerp(cursorStartX, cursorEndX, _currentProgress);
             cursor.anchoredPosition = new Vector2(targetX, cursorYOffset);
 
-            // Berhenti jika sudah sampai ujung
             if (_currentProgress >= 1f) _isMoving = false;
         }
     }
 
-    // Panggil fungsi ini saat MonsterLogic memulai sequence
     public void StartManualMovement(float totalDuration)
     {
         _startTime = Time.time;
@@ -94,9 +117,5 @@ public class TimelineController : MonoBehaviour
         _isMoving = true;
     }
 
-    // Fungsi lama UpdateCursor (Opsional: Bisa tetap dipakai untuk koreksi ringan)
-    public void UpdateCursor(float progress)
-    {
-        // Jika ingin sinkronisasi ketat, biarkan Update yang menangani linear-nya
-    }
+    public void UpdateCursor(float progress) { }
 }
