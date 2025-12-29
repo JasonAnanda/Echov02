@@ -11,7 +11,7 @@ public class MonsterLogic : MonoBehaviour
 
     [Header("Movement Settings")]
     public float speed = 2.0f;
-    public float startTriggerX = 0f; // Variabel ini sekarang bisa diabaikan
+    public float startTriggerX = 0f;
 
     [Header("Bounce Settings")]
     public float bounceHeight = 0.3f;
@@ -21,10 +21,13 @@ public class MonsterLogic : MonoBehaviour
     [Header("Rhythm Data")]
     public int beatCounter = 0;
     private bool _hasStarted = false;
+    public bool isDefeated = false; // --- UPDATE: Status Tuntas ---
 
     [Header("Pattern Data")]
     public string[] command;
     public int signalDuration = 2;
+    private int _score = 0;        // --- UPDATE: Skor Input ---
+    private int _totalNotes = 0;   // --- UPDATE: Total Diamond ---
 
     [Header("Audio Settings (Python Style)")]
     public AudioSource monsterVoice;
@@ -32,8 +35,6 @@ public class MonsterLogic : MonoBehaviour
     public AudioClip pattern2Sound;
     public AudioClip pattern3Sound;
     public AudioClip pattern4Sound;
-
-    // --- UPDATE: SUARA CUE TURN PLAYER ---
     public AudioClip cueSound;
 
     void Start()
@@ -58,6 +59,10 @@ public class MonsterLogic : MonoBehaviour
             else if (patternId == 3) command = new string[] { "A", "A", "-", "A", "A", "-" };
             signalDuration = 2;
         }
+
+        // --- UPDATE: Hitung total notes yang harus ditekan ---
+        _totalNotes = 0;
+        foreach (string s in command) if (s != "-") _totalNotes++;
     }
 
     void OnEnable() { RhythmManager.OnBeat += UpdateMonsterBeat; }
@@ -65,16 +70,10 @@ public class MonsterLogic : MonoBehaviour
 
     void Update()
     {
-        // 1. Pergerakan monster tetap ada
         transform.Translate(Vector3.left * speed * Time.deltaTime);
 
-        // 2. Animasi melompat (bounce) tetap ada
         float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
         transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
-
-        // --- PERBAIKAN: LOGIKA AUTO-SELECTED DIHAPUS ---
-        // Pengecekan 'transform.position.x <= startTriggerX' dihilangkan 
-        // agar monster hanya bisa jalan melalui pemicu manual (StartSequence).
 
         if (transform.position.x < -15f)
         {
@@ -84,10 +83,11 @@ public class MonsterLogic : MonoBehaviour
 
     public void StartSequence()
     {
-        // Sekarang StartSequence hanya berjalan jika dipanggil oleh TargetSelector pemain
-        if (!_hasStarted)
+        // --- UPDATE: Jangan izinkan seleksi jika sudah kalah ---
+        if (!_hasStarted && !isDefeated)
         {
             _hasStarted = true;
+            _score = 0;
             currentState = MonsterState.DEMO;
             beatCounter = 0;
 
@@ -95,8 +95,27 @@ public class MonsterLogic : MonoBehaviour
             if (tc != null) tc.SpawnPattern(command);
 
             PlayVoice();
-            Debug.Log($"Monster {monsterType} Selected Manually: Pattern {patternId}");
+            Debug.Log($"Monster {monsterType} Start. Target Score: {_totalNotes}");
         }
+    }
+
+    // --- UPDATE: Fungsi Cek Input dari PlayerInputHandler ---
+    public bool CheckInput(string inputKey, float progress)
+    {
+        if (isDefeated) return false;
+
+        // Cari index diamond terdekat (0-5)
+        int targetIndex = Mathf.RoundToInt(progress * 6f);
+        if (targetIndex >= command.Length) return false;
+
+        if (command[targetIndex] == inputKey)
+        {
+            _score++;
+            TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+            if (tc != null) tc.MarkDiamondHit(targetIndex);
+            return true;
+        }
+        return false;
     }
 
     void PlayVoice()
@@ -135,7 +154,6 @@ public class MonsterLogic : MonoBehaviour
                 {
                     currentState = MonsterState.SIGNAL;
                     beatCounter = 0;
-
                     if (monsterVoice != null && cueSound != null)
                         monsterVoice.PlayOneShot(cueSound);
                 }
@@ -146,24 +164,30 @@ public class MonsterLogic : MonoBehaviour
                 {
                     currentState = MonsterState.USER;
                     beatCounter = 0;
-
                     TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-                    if (tc != null)
-                    {
-                        // Sync ke 240 BPM (0.25 detik per beat)
-                        float beatInterval = 0.25f;
-                        float totalDuration = 6 * beatInterval;
-                        tc.StartManualMovement(totalDuration);
-                    }
+                    if (tc != null) tc.StartManualMovement(1.5f); // 6 beat * 0.25f
                 }
                 break;
 
             case MonsterState.USER:
                 if (beatCounter >= 6)
                 {
-                    Debug.Log("User Phase Finished");
+                    // --- UPDATE: Cek skor akhir fase ---
+                    if (_score >= _totalNotes)
+                    {
+                        Debug.Log("Monster Tuntas!");
+                        isDefeated = true;
+                        // Ubah warna jadi redup sebagai tanda sudah kalah
+                        GetComponent<SpriteRenderer>().color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                    }
+                    else
+                    {
+                        Debug.Log("Gagal! Monster tetap aktif.");
+                    }
+
                     _hasStarted = false;
                     currentState = MonsterState.WAIT;
+                    beatCounter = 0;
                 }
                 break;
         }

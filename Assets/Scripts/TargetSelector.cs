@@ -8,26 +8,33 @@ public class TargetSelector : MonoBehaviour
 
     void Update()
     {
-        // 1. Ambil input Axis dari Input Manager (6th Axis)
         float dPadInput = Input.GetAxisRaw("Horizontal");
 
-        // --- TAMBAHAN DEBUGGING INPUT ---
-        // Muncul di Console hanya jika ada nilai input yang masuk (melebihi deadzone 0.1)
         if (Mathf.Abs(dPadInput) > 0.1f)
         {
             Debug.Log($"<color=orange>D-Pad Terdeteksi:</color> Value: {dPadInput} | Axis: Horizontal");
         }
-        // --------------------------------
 
-        // Mencari semua monster dengan Tag "Enemy"
-        GameObject[] foundEnemies = GameObject.FindGameObjectsWithTag("Enemy");
+        // --- UPDATE: Hanya ambil musuh yang belum dikalahkan (isDefeated == false) ---
+        GameObject[] allEnemies = GameObject.FindGameObjectsWithTag("Enemy");
+        List<GameObject> validEnemies = new List<GameObject>();
 
-        // Logika Navigasi D-Pad
+        foreach (GameObject go in allEnemies)
+        {
+            MonsterLogic ml = go.GetComponent<MonsterLogic>();
+            // Cek jika monster ada dan belum tuntas
+            if (ml != null && !ml.isDefeated)
+            {
+                validEnemies.Add(go);
+            }
+        }
+        // ----------------------------------------------------------------------------
+
         if (Input.GetKeyDown(KeyCode.RightArrow) || dPadInput > 0.5f)
         {
             if (!_isDPadPressed)
             {
-                SwitchTarget(1, foundEnemies);
+                SwitchTarget(1, validEnemies.ToArray()); // Gunakan list yang sudah difilter
                 _isDPadPressed = true;
             }
         }
@@ -35,7 +42,7 @@ public class TargetSelector : MonoBehaviour
         {
             if (!_isDPadPressed)
             {
-                SwitchTarget(-1, foundEnemies);
+                SwitchTarget(-1, validEnemies.ToArray()); // Gunakan list yang sudah difilter
                 _isDPadPressed = true;
             }
         }
@@ -44,7 +51,6 @@ public class TargetSelector : MonoBehaviour
             _isDPadPressed = false;
         }
 
-        // Tombol A Joystick (Button 0) atau Spasi untuk Confirm
         if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.Space))
         {
             ConfirmSelection();
@@ -55,19 +61,21 @@ public class TargetSelector : MonoBehaviour
     {
         if (foundEnemies.Length == 0)
         {
-            Debug.LogWarning("<color=red>TargetSelector:</color> Tidak ada objek dengan Tag 'Enemy' ditemukan!");
+            Debug.LogWarning("<color=red>TargetSelector:</color> Tidak ada musuh aktif yang bisa dipilih!");
+            GlobalData.currentTarget = null; // Reset target jika tidak ada yang valid
             return;
         }
 
-        // Urutkan musuh berdasarkan posisi X agar navigasi logis
         List<GameObject> sortedEnemies = new List<GameObject>(foundEnemies);
         sortedEnemies.Sort((a, b) => a.transform.position.x.CompareTo(b.transform.position.x));
 
+        // Pastikan currentIndex tidak out of bounds setelah filter
         _currentIndex = Mathf.Clamp(_currentIndex + direction, 0, sortedEnemies.Count - 1);
         GlobalData.currentTarget = sortedEnemies[_currentIndex];
 
-        // Feedback Visual
-        foreach (GameObject enemy in sortedEnemies)
+        // Feedback Visual: Reset semua musuh yang ada di scene (termasuk yang tuntas agar tidak salah skala)
+        GameObject[] allSceneEnemies = GameObject.FindGameObjectsWithTag("Enemy");
+        foreach (GameObject enemy in allSceneEnemies)
         {
             if (enemy != null) enemy.transform.localScale = Vector3.one;
         }
@@ -85,7 +93,8 @@ public class TargetSelector : MonoBehaviour
         {
             MonsterLogic ml = GlobalData.currentTarget.GetComponent<MonsterLogic>();
 
-            if (ml != null && ml.currentState == MonsterLogic.MonsterState.WAIT)
+            // --- UPDATE: Tambahkan pengecekan !ml.isDefeated ---
+            if (ml != null && ml.currentState == MonsterLogic.MonsterState.WAIT && !ml.isDefeated)
             {
                 Debug.Log("<color=green>Confirm Selection:</color> Memulai Sequence " + GlobalData.currentTarget.name);
                 ml.StartSequence();
@@ -93,7 +102,7 @@ public class TargetSelector : MonoBehaviour
         }
         else
         {
-            Debug.Log("<color=red>Confirm Failed:</color> Belum ada target yang dipilih!");
+            Debug.Log("<color=red>Confirm Failed:</color> Belum ada target aktif yang dipilih!");
         }
     }
 }
