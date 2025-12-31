@@ -99,7 +99,7 @@ public class MonsterLogic : MonoBehaviour
         }
     }
 
-    // PROTEKSI: CheckInput tidak lapor Miss jika bukan giliran Player
+    // --- UPDATE: Pengecekan Input dengan Toleransi Ekstra untuk Note Pertama ---
     public bool CheckInput(string inputKey, float progress)
     {
         if (isDefeated || currentState != MonsterState.USER) return true;
@@ -108,9 +108,14 @@ public class MonsterLogic : MonoBehaviour
         for (int i = 0; i < command.Length; i++)
         {
             if (command[i] == "-" || _hitRegistered[i]) continue;
+
             float targetProgress = i * beatInterval;
 
-            if (progress >= (targetProgress - beatTolerance) && progress <= (targetProgress + beatTolerance))
+            // FIX: Diamond pertama (index 0) diberi toleransi lebih besar (+0.05)
+            // Ini mengompensasi hilangnya jendela waktu sebelum kursor bergerak (progress < 0)
+            float currentTolerance = (i == 0) ? beatTolerance + 0.05f : beatTolerance;
+
+            if (progress >= (targetProgress - currentTolerance) && progress <= (targetProgress + currentTolerance))
             {
                 if (command[i] == inputKey)
                 {
@@ -149,7 +154,6 @@ public class MonsterLogic : MonoBehaviour
                 {
                     currentState = MonsterState.USER;
                     beatCounter = 0;
-                    // NYALAKAN INPUT SAAT USER TURN
                     PlayerInputHandler pih = Object.FindAnyObjectByType<PlayerInputHandler>();
                     if (pih != null) pih.enabled = true;
 
@@ -160,7 +164,6 @@ public class MonsterLogic : MonoBehaviour
             case MonsterState.USER:
                 if (beatCounter >= 6)
                 {
-                    // MATIKAN INPUT SAAT USER TURN BERAKHIR
                     PlayerInputHandler pih = Object.FindAnyObjectByType<PlayerInputHandler>();
                     if (pih != null) pih.enabled = false;
 

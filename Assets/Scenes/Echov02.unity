@@ -644,7 +644,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -405, y: -442}
+  m_AnchoredPosition: {x: -475, y: -442}
   m_SizeDelta: {x: 20, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &634625836
@@ -751,7 +751,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -442}
-  m_SizeDelta: {x: 800, y: 10}
+  m_SizeDelta: {x: 970, y: 10}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &798289764
 MonoBehaviour:
@@ -1862,8 +1862,8 @@ MonoBehaviour:
   prefabA: {fileID: 1805025635054614653, guid: faffad837bd6108438b985b1b20af733, type: 3}
   prefabY: {fileID: 3473316509577836722, guid: 94b1d5bd50a41f0479ab80a4a84c776d, type: 3}
   canvasTimeline: {fileID: 1921824472}
-  cursorStartX: -400
-  cursorEndX: 400
+  cursorStartX: -475
+  cursorEndX: 475
   noteYOffset: 0
   cursorYOffset: -442
 --- !u!1 &2039565006

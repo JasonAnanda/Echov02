@@ -44,12 +44,21 @@ public class PlayerInputHandler : MonoBehaviour
         return null;
     }
 
+    // --- UPDATE: HandleInput dengan Dead-Zone 0.01 agar Diamond pertama mudah dideteksi ---
     void HandleInput(MonsterLogic monster, string inputKey, AudioClip clip)
     {
-        TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-        if (tc == null || tc.GetCurrentProgress() < 0.05f) return;
+        if (monster == null) return;
 
-        bool isHit = monster.CheckInput(inputKey, tc.GetCurrentProgress());
+        TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+        if (tc == null) return;
+
+        float currentProgress = tc.GetCurrentProgress();
+
+        // PERBAIKAN: Perkecil dead-zone menjadi 0.01 (1%) 
+        // agar tidak memakan jendela hit diamond pertama, tapi tetap menangkal double-click konfirmasi.
+        if (currentProgress < 0.01f) return;
+
+        bool isHit = monster.CheckInput(inputKey, currentProgress);
 
         if (isHit)
         {
