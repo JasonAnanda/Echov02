@@ -12,7 +12,7 @@ public class RhythmManager : MonoBehaviour
     public AudioSource bgmSource;
     public AudioSource tickSource;
 
-    public static event Action<int> OnBeat; // Pastikan penulisan tepat
+    public static event Action<int> OnBeat;
     public static RhythmManager Instance;
 
     private double _nextSystemBeatTime;
@@ -56,24 +56,15 @@ public class RhythmManager : MonoBehaviour
             _nextSystemBeatTime += _systemInterval;
         }
 
-        // 3. Input Window
+        // 3. Input Window (Tetap diupdate jika script lain membutuhkannya)
         float diff = (float)Math.Abs(currentDsp - (_nextSystemBeatTime - _systemInterval));
         canInput = diff <= beatTolerance;
 
-        // 4. Input Handler
-        if (Input.GetKeyDown(KeyCode.JoystickButton0)) ProcessInput("A");
-        if (Input.GetKeyDown(KeyCode.JoystickButton3)) ProcessInput("Y");
+        // --- UPDATE: Point 4 (Input Handler) DIHAPUS ---
+        // Alasan: Menghindari bentrok dengan PlayerInputHandler saat fase pemilihan target.
     }
 
-    private void ProcessInput(string key)
-    {
-        if (canInput) Debug.Log("HIT: " + key);
-        else HandleMiss();
-    }
-
-    private void HandleMiss()
-    {
-        GlobalData.gauge += GlobalData.SMALL_FAIL;
-        Debug.Log("MISS! Gauge: " + GlobalData.gauge);
-    }
+    // --- UPDATE: ProcessInput & HandleMiss DIHAPUS ---
+    // Alasan: Logika kegagalan (Miss) sekarang ditangani langsung oleh PlayerInputHandler 
+    // hanya saat MonsterState == USER.
 }

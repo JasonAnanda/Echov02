@@ -7,18 +7,24 @@ public class PlayerInputHandler : MonoBehaviour
     public AudioClip soundY;
     public AudioClip soundMiss;
 
-    // --- UPDATE: Variabel pencegah double-frame input ---
     private int _lastProcessedFrame = -1;
+    private float _activationCooldown = 0f;
+
+    void OnEnable()
+    {
+        // Jeda 0.2 detik agar klik konfirmasi tidak dianggap miss
+        _activationCooldown = 0.2f;
+    }
 
     void Update()
     {
-        MonsterLogic activeMonster = FindActiveMonster();
-        if (activeMonster == null) return;
+        if (_activationCooldown > 0) { _activationCooldown -= Time.deltaTime; return; }
 
-        // --- UPDATE: Abaikan jika input diproses di frame yang sama dengan TargetSelector ---
+        MonsterLogic activeMonster = FindActiveMonster();
+        if (activeMonster == null) { this.enabled = false; return; }
+
         if (Time.frameCount == _lastProcessedFrame) return;
 
-        // Input untuk Controller (A = Button 0, Y = Button 3)
         if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.Space))
         {
             HandleInput(activeMonster, "A", soundA);
@@ -34,26 +40,16 @@ public class PlayerInputHandler : MonoBehaviour
     private MonsterLogic FindActiveMonster()
     {
         MonsterLogic[] allMonsters = Object.FindObjectsByType<MonsterLogic>(FindObjectsSortMode.None);
-        foreach (var m in allMonsters)
-        {
-            // Pastikan hanya mendeteksi monster yang sedang dalam giliran pemain
-            if (m.currentState == MonsterLogic.MonsterState.USER) return m;
-        }
+        foreach (var m in allMonsters) if (m.currentState == MonsterLogic.MonsterState.USER) return m;
         return null;
     }
 
     void HandleInput(MonsterLogic monster, string inputKey, AudioClip clip)
     {
         TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-        if (tc == null) return;
+        if (tc == null || tc.GetCurrentProgress() < 0.05f) return;
 
-        float currentProgress = tc.GetCurrentProgress();
-
-        // --- UPDATE: Proteksi tambahan (Dead-zone Progress) ---
-        // Jika kursor baru mulai (di bawah 2% jalan), abaikan input sisa dari TargetSelector
-        if (currentProgress < 0.02f) return;
-
-        bool isHit = monster.CheckInput(inputKey, currentProgress);
+        bool isHit = monster.CheckInput(inputKey, tc.GetCurrentProgress());
 
         if (isHit)
         {
@@ -61,7 +57,13 @@ public class PlayerInputHandler : MonoBehaviour
         }
         else
         {
-            if (inputAudioSource && soundMiss) inputAudioSource.PlayOneShot(soundMiss);
+            // HANYA tambah gauge jika benar-benar sedang USER turn
+            if (monster.currentState == MonsterLogic.MonsterState.USER)
+            {
+                GlobalData.gauge += GlobalData.SMALL_FAIL;
+                if (inputAudioSource && soundMiss) inputAudioSource.PlayOneShot(soundMiss);
+                Debug.Log("MISS! Gauge: " + GlobalData.gauge);
+            }
         }
     }
 }
