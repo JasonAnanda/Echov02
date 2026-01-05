@@ -2,9 +2,12 @@ using UnityEngine;
 
 public class MonsterLogic : MonoBehaviour
 {
+    #region Data Structures
     public enum MonsterState { WAIT, DEMO, SIGNAL, USER }
     public MonsterState currentState = MonsterState.WAIT;
+    #endregion
 
+    #region Inspector Variables
     [Header("Monster Identity")]
     public string monsterType = "A";
     public int patternId;
@@ -17,6 +20,12 @@ public class MonsterLogic : MonoBehaviour
     public float bounceHeight = 0.3f;
     private float _baseY;
     private int _moveState = 1;
+
+    [Header("Visual Feedback")]
+    private SpriteRenderer _sr;
+    private Color _originalColor;
+    public Color highlightColor = Color.yellow;
+    public float flashSpeed = 15f;
 
     [Header("Rhythm Data")]
     public int beatCounter = 0;
@@ -40,13 +49,59 @@ public class MonsterLogic : MonoBehaviour
     public AudioClip pattern3Sound;
     public AudioClip pattern4Sound;
     public AudioClip cueSound;
+    #endregion
 
+    #region Unity Lifecycle
     void Start()
     {
+        _sr = GetComponent<SpriteRenderer>();
+        _originalColor = _sr.color;
+
         InitializePattern();
         _baseY = transform.position.y;
     }
 
+    void OnEnable() { RhythmManager.OnBeat += UpdateMonsterBeat; }
+    void OnDisable() { RhythmManager.OnBeat -= UpdateMonsterBeat; }
+
+    void Update()
+    {
+        HandleMovement();
+        HandleVisuals();
+
+        if (transform.position.x < -15f) Destroy(gameObject);
+    }
+    #endregion
+
+    #region Core Logic: Movement & Visuals
+    void HandleMovement()
+    {
+        transform.Translate(Vector3.left * speed * Time.deltaTime);
+        float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
+        transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
+    }
+
+    void HandleVisuals()
+    {
+        // UPDATE: Kedipan sekarang aktif di fase DEMO, SIGNAL, dan USER
+        if (currentState == MonsterState.DEMO || currentState == MonsterState.SIGNAL || currentState == MonsterState.USER)
+        {
+            // Smooth Sinusoidal Fade
+            float lerp = (Mathf.Sin(Time.time * flashSpeed) + 1.0f) / 2.0f;
+            _sr.color = Color.Lerp(_originalColor, highlightColor, lerp);
+        }
+        else if (isDefeated)
+        {
+            _sr.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+        }
+        else
+        {
+            if (_sr.color != _originalColor) _sr.color = _originalColor;
+        }
+    }
+    #endregion
+
+    #region Core Logic: Pattern & Rhythm
     void InitializePattern()
     {
         if (monsterType == "C")
@@ -69,18 +124,6 @@ public class MonsterLogic : MonoBehaviour
         _hitRegistered = new bool[command.Length];
     }
 
-    void OnEnable() { RhythmManager.OnBeat += UpdateMonsterBeat; }
-    void OnDisable() { RhythmManager.OnBeat -= UpdateMonsterBeat; }
-
-    void Update()
-    {
-        transform.Translate(Vector3.left * speed * Time.deltaTime);
-        float targetY = (_moveState == 1) ? _baseY + bounceHeight : _baseY;
-        transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
-
-        if (transform.position.x < -15f) Destroy(gameObject);
-    }
-
     public void StartSequence()
     {
         if (!_hasStarted && !isDefeated)
@@ -99,7 +142,48 @@ public class MonsterLogic : MonoBehaviour
         }
     }
 
-    // --- UPDATE: Pengecekan Input dengan Toleransi Ekstra untuk Note Pertama ---
+    void UpdateMonsterBeat(int systemBeat)
+    {
+        if (systemBeat == 0) _moveState = (_moveState == 0) ? 1 : 0;
+
+        if (!_hasStarted) return;
+        beatCounter++;
+
+        HandleStateSwitch();
+    }
+
+    void HandleStateSwitch()
+    {
+        switch (currentState)
+        {
+            case MonsterState.DEMO:
+                if (beatCounter >= 6) { currentState = MonsterState.SIGNAL; beatCounter = 0; if (cueSound != null) monsterVoice.PlayOneShot(cueSound); }
+                break;
+            case MonsterState.SIGNAL:
+                if (beatCounter >= signalDuration)
+                {
+                    currentState = MonsterState.USER;
+                    beatCounter = 0;
+                    SetPlayerInput(true);
+                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
+                    if (tc != null) tc.StartManualMovement(1.5f);
+                }
+                break;
+            case MonsterState.USER:
+                if (beatCounter >= 6)
+                {
+                    SetPlayerInput(false);
+                    isDefeated = (_score >= _totalNotes);
+                    _hasStarted = false;
+                    currentState = MonsterState.WAIT;
+                    beatCounter = 0;
+                }
+                break;
+        }
+    }
+    #endregion
+
+    #region Input & Audio Helpers
     public bool CheckInput(string inputKey, float progress)
     {
         if (isDefeated || currentState != MonsterState.USER) return true;
@@ -110,9 +194,6 @@ public class MonsterLogic : MonoBehaviour
             if (command[i] == "-" || _hitRegistered[i]) continue;
 
             float targetProgress = i * beatInterval;
-
-            // FIX: Diamond pertama (index 0) diberi toleransi lebih besar (+0.05)
-            // Ini mengompensasi hilangnya jendela waktu sebelum kursor bergerak (progress < 0)
             float currentTolerance = (i == 0) ? beatTolerance + 0.05f : beatTolerance;
 
             if (progress >= (targetProgress - currentTolerance) && progress <= (targetProgress + currentTolerance))
@@ -130,6 +211,12 @@ public class MonsterLogic : MonoBehaviour
         return false;
     }
 
+    void SetPlayerInput(bool state)
+    {
+        PlayerInputHandler pih = Object.FindAnyObjectByType<PlayerInputHandler>();
+        if (pih != null) pih.enabled = state;
+    }
+
     void PlayVoice()
     {
         if (monsterVoice == null) return;
@@ -137,43 +224,5 @@ public class MonsterLogic : MonoBehaviour
         AudioClip clip = (patternId == 1) ? pattern1Sound : (patternId == 2) ? pattern2Sound : (patternId == 3) ? pattern3Sound : pattern4Sound;
         if (clip != null) { monsterVoice.clip = clip; monsterVoice.Play(); }
     }
-
-    void UpdateMonsterBeat(int systemBeat)
-    {
-        if (systemBeat == 0) _moveState = (_moveState == 0) ? 1 : 0;
-        if (!_hasStarted) return;
-        beatCounter++;
-
-        switch (currentState)
-        {
-            case MonsterState.DEMO:
-                if (beatCounter >= 6) { currentState = MonsterState.SIGNAL; beatCounter = 0; if (cueSound != null) monsterVoice.PlayOneShot(cueSound); }
-                break;
-            case MonsterState.SIGNAL:
-                if (beatCounter >= signalDuration)
-                {
-                    currentState = MonsterState.USER;
-                    beatCounter = 0;
-                    PlayerInputHandler pih = Object.FindAnyObjectByType<PlayerInputHandler>();
-                    if (pih != null) pih.enabled = true;
-
-                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-                    if (tc != null) tc.StartManualMovement(1.5f);
-                }
-                break;
-            case MonsterState.USER:
-                if (beatCounter >= 6)
-                {
-                    PlayerInputHandler pih = Object.FindAnyObjectByType<PlayerInputHandler>();
-                    if (pih != null) pih.enabled = false;
-
-                    isDefeated = (_score >= _totalNotes);
-                    if (isDefeated) GetComponent<SpriteRenderer>().color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-                    _hasStarted = false;
-                    currentState = MonsterState.WAIT;
-                    beatCounter = 0;
-                }
-                break;
-        }
-    }
+    #endregion
 }

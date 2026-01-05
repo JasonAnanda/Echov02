@@ -825,7 +825,7 @@ MonoBehaviour:
   spawnPoint: {fileID: 778082797}
   intervalA: 8
   intervalC: 20
-  birdYOffset: 3
+  birdYOffset: 4
 --- !u!4 &979418399
 Transform:
   m_ObjectHideFlags: 0
@@ -1060,7 +1060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16c57b73da3abaf4982d57514972c752, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  bounceHeight: 0.3
+  bounceHeight: 0.2
 --- !u!82 &1161917397
 AudioSource:
   m_ObjectHideFlags: 0
