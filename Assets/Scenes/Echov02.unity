@@ -820,9 +820,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96eac55d2821959459ae96548829a8e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  monsterPrefab: {fileID: 155006947008777541, guid: 679f42ee99effc242a4091b3d1b7707b, type: 3}
+  monsterAPrefab: {fileID: 155006947008777541, guid: 679f42ee99effc242a4091b3d1b7707b, type: 3}
+  monsterCPrefab: {fileID: 155006947008777541, guid: 1d97b8eace6b5bc4faef9214f2571369, type: 3}
   spawnPoint: {fileID: 778082797}
-  spawnInterval: 8
+  intervalA: 8
+  intervalC: 20
+  birdYOffset: 3
 --- !u!4 &979418399
 Transform:
   m_ObjectHideFlags: 0
@@ -1321,7 +1324,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 1d63d436ec764fe4a9a184f7a01b0704, type: 3}
   m_PlayOnAwake: 0
-  m_Volume: 1
+  m_Volume: 0
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -1415,7 +1418,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: d1b9ecb9ade01f94ca2b8741d9252c65, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 4ce74c1b13cb22b4cba9869da56464cd, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0.256
   m_Pitch: 1
