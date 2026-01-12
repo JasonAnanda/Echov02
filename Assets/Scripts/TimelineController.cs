@@ -7,26 +7,27 @@ public class TimelineController : MonoBehaviour
     #region 1. UI & PREFAB REFERENCES
     public RectTransform cursor;
     public Transform noteSpawnPoint;
-    public GameObject prefabA;
-    public GameObject prefabY;
+    public GameObject prefabA; // Untuk BA
+    public GameObject prefabY; // Untuk BY
     public GameObject canvasTimeline;
     #endregion
 
-    #region 2. POSITION & SPACING SETTINGS
-    [Header("Manual Cursor Position")]
-    public float cursorStartX = -450f;
-    public float cursorEndX = 450f;
+    #region 2. POSITION & BPM SETTINGS
+    [Header("Full Screen Timeline Settings")]
+    public float cursorStartX = -1000f; // Sesuai permintaan (Gambar 3)
+    public float cursorEndX = 1000f;   // Sesuai permintaan (Gambar 3)
+
+    [Tooltip("Jika diisi 0, maka akan otomatis menghitung berdasarkan BPM 120 (3 Detik)")]
+    public float cursorDuration = 0f;
 
     [Header("Visual Alignment")]
     public float noteYOffset = 0f;
-    public float cursorYOffset = 0f;
-
-    private float _noteSpacing = 120f;
+    public float cursorYOffset = -442f; // Sesuai permintaan (Gambar 3)
     #endregion
 
     #region 3. INTERNAL DATA & STATE
     private float _currentProgress = 0f;
-    private GameObject[] _noteSlots = new GameObject[6];
+    private Dictionary<int, GameObject> _noteSlots = new Dictionary<int, GameObject>();
     private List<GameObject> _activeNotes = new List<GameObject>();
 
     private float _startTime;
@@ -45,15 +46,18 @@ public class TimelineController : MonoBehaviour
     {
         if (_isMoving && cursor != null)
         {
-            // Menghitung progress linear berdasarkan waktu nyata (Time.time)
             float elapsed = Time.time - _startTime;
             _currentProgress = Mathf.Clamp01(elapsed / _duration);
 
-            // Pergerakan visual kursor
             float targetX = Mathf.Lerp(cursorStartX, cursorEndX, _currentProgress);
             cursor.anchoredPosition = new Vector2(targetX, cursorYOffset);
 
-            if (_currentProgress >= 1f) _isMoving = false;
+            // Area input sekarang aktif selama kursor bergerak melintasi layar (Full Screen)
+            if (_currentProgress >= 1f)
+            {
+                _isMoving = false;
+                ResetCursor();
+            }
         }
     }
     #endregion
@@ -61,7 +65,6 @@ public class TimelineController : MonoBehaviour
     #region 5. TIMELINE CONTROL METHODS
     private void ResetCursor()
     {
-        _isMoving = false;
         _currentProgress = 0f;
         if (cursor != null)
         {
@@ -73,61 +76,74 @@ public class TimelineController : MonoBehaviour
     {
         foreach (GameObject n in _activeNotes) if (n != null) Destroy(n);
         _activeNotes.Clear();
-
-        for (int i = 0; i < _noteSlots.Length; i++) _noteSlots[i] = null;
-
+        _noteSlots.Clear();
         ResetCursor();
     }
 
     public void SpawnPattern(string[] command)
     {
         ClearTimeline();
+
+        float totalWidth = Mathf.Abs(cursorEndX - cursorStartX);
+
+        // Membagi rata posisi berdasarkan 6 beat (BPM 120) di lebar 2000 unit
+        float step = totalWidth / command.Length;
+
         for (int i = 0; i < command.Length; i++)
         {
-            GameObject prefabToSpawn = (command[i] == "A") ? prefabA : (command[i] == "Y" || command[i] == "W") ? prefabY : null;
+            GameObject prefabToSpawn = null;
+            if (command[i] == "BA") prefabToSpawn = prefabA;
+            else if (command[i] == "BY") prefabToSpawn = prefabY;
+
             if (prefabToSpawn != null)
             {
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
-                note.GetComponent<RectTransform>().anchoredPosition = new Vector2(i * _noteSpacing, noteYOffset);
+                RectTransform rt = note.GetComponent<RectTransform>();
+
+                // Posisi Diamond/Kotak disebar presisi di sepanjang lintasan kursor
+                float posX = cursorStartX + (i * step) + (step / 2f);
+                rt.anchoredPosition = new Vector2(posX, noteYOffset);
 
                 _activeNotes.Add(note);
-                if (i < _noteSlots.Length) _noteSlots[i] = note;
+                _noteSlots.Add(i, note);
             }
         }
     }
     #endregion
 
-    #region 6. RHYTHM INTERFACE (Input & Progress)
-    // Digunakan oleh PlayerInputHandler untuk cek presisi
+    #region 6. RHYTHM INTERFACE (Updated)
     public float GetCurrentProgress()
     {
         return _currentProgress;
     }
 
-    // Digunakan oleh MonsterLogic untuk feedback visual sukses
     public void MarkDiamondHit(int index)
     {
-        if (index >= 0 && index < _noteSlots.Length && _noteSlots[index] != null)
+        if (_noteSlots.ContainsKey(index) && _noteSlots[index] != null)
         {
             Image img = _noteSlots[index].GetComponent<Image>();
-            if (img != null)
-            {
-                img.color = Color.green; // Diamond berubah hijau saat kena hit
-            }
-            _noteSlots[index].transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            if (img != null) img.color = Color.green;
+
+            _noteSlots[index].transform.localScale = Vector3.one * 1.2f;
         }
     }
 
-    // Dipanggil oleh MonsterLogic saat masuk fase USER
-    public void StartManualMovement(float totalDuration)
+    // UPDATE: Menangani durasi otomatis untuk sinkronisasi BPM 120
+    public void StartManualMovement(float overrideDuration = 0)
     {
         _startTime = Time.time;
-        _duration = totalDuration; // Durasi sesuai beatInterval * 6 beat
+
+        // HITUNG DURASI: Untuk 120 BPM pada 6 Beat, durasi ideal adalah 3.0 detik
+        if (overrideDuration <= 0 && cursorDuration <= 0)
+        {
+            _duration = 3.0f;
+        }
+        else
+        {
+            _duration = (overrideDuration > 0) ? overrideDuration : cursorDuration;
+        }
+
         _isMoving = true;
     }
-    #endregion
-
-    #region 7. LEGACY / UNUSED
-    public void UpdateCursor(float progress) { }
     #endregion
 }

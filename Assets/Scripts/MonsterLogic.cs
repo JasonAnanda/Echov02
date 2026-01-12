@@ -135,7 +135,7 @@ public class MonsterLogic : MonoBehaviour
             if (tc != null)
             {
                 tc.SpawnPattern(command);
-                tc.StartManualMovement(1.5f); // Durasi kursor (6 beat)
+                tc.StartManualMovement(); // Durasi kursor (6 beat)
             }
 
             PlayVoice();

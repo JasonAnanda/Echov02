@@ -1,18 +1,37 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerInputHandler : MonoBehaviour
 {
     public AudioSource inputAudioSource;
-    public AudioClip soundA;
-    public AudioClip soundY;
+    public AudioClip soundA; // Nakama
+    public AudioClip soundY; // Chigau
     public AudioClip soundMiss;
 
+    [Header("Visual Juice Settings")]
+    public Transform playerSpriteTransform;
+    public float bounceSpeed = 0.05f;
+
+    [Tooltip("Ukuran saat memantul ke bawah (Gepeng). Contoh: X=1.2, Y=0.8")]
+    public Vector3 squashScale = new Vector3(1.2f, 0.8f, 1f);
+
+    [Tooltip("Ukuran saat memantul ke atas (Lonjong). Contoh: X=0.8, Y=1.2")]
+    public Vector3 stretchScale = new Vector3(0.8f, 1.2f, 1f);
+
+    private Vector3 _originalScale;
+    private Coroutine _bounceCoroutine;
     private int _lastProcessedFrame = -1;
     private float _activationCooldown = 0f;
 
+    void Start()
+    {
+        // Menyimpan scale awal sebagai referensi untuk kembali normal
+        if (playerSpriteTransform != null) _originalScale = playerSpriteTransform.localScale;
+        else _originalScale = transform.localScale;
+    }
+
     void OnEnable()
     {
-        // Jeda 0.2 detik agar klik konfirmasi tidak dianggap miss
         _activationCooldown = 0.2f;
     }
 
@@ -25,16 +44,30 @@ public class PlayerInputHandler : MonoBehaviour
 
         if (Time.frameCount == _lastProcessedFrame) return;
 
+        // INPUT TOMBOL A (NAKAMA)
         if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.Space))
         {
-            HandleInput(activeMonster, "A", soundA);
-            _lastProcessedFrame = Time.frameCount;
+            ExecuteInput(activeMonster, "A", soundA);
         }
+        // INPUT TOMBOL Y (CHIGAU)
         else if (Input.GetKeyDown(KeyCode.JoystickButton3) || Input.GetKeyDown(KeyCode.Y))
         {
-            HandleInput(activeMonster, "Y", soundY);
-            _lastProcessedFrame = Time.frameCount;
+            ExecuteInput(activeMonster, "Y", soundY);
         }
+    }
+
+    void ExecuteInput(MonsterLogic monster, string key, AudioClip characterClip)
+    {
+        _lastProcessedFrame = Time.frameCount;
+
+        // 1. VISUAL: Karakter selalu memantul dengan settingan Vector3
+        TriggerPlayerBounce();
+
+        // 2. AUDIO: Suara karakter (Nakama/Chigau) SELALU BERBUNYI kapanpun ditekan
+        if (inputAudioSource && characterClip) inputAudioSource.PlayOneShot(characterClip);
+
+        // 3. LOGIKA: Validasi Hit atau Miss
+        HandleInput(monster, key);
     }
 
     private MonsterLogic FindActiveMonster()
@@ -44,8 +77,7 @@ public class PlayerInputHandler : MonoBehaviour
         return null;
     }
 
-    // --- UPDATE: HandleInput dengan Dead-Zone 0.01 agar Diamond pertama mudah dideteksi ---
-    void HandleInput(MonsterLogic monster, string inputKey, AudioClip clip)
+    void HandleInput(MonsterLogic monster, string inputKey)
     {
         if (monster == null) return;
 
@@ -54,25 +86,40 @@ public class PlayerInputHandler : MonoBehaviour
 
         float currentProgress = tc.GetCurrentProgress();
 
-        // PERBAIKAN: Perkecil dead-zone menjadi 0.01 (1%) 
-        // agar tidak memakan jendela hit diamond pertama, tapi tetap menangkal double-click konfirmasi.
         if (currentProgress < 0.01f) return;
 
         bool isHit = monster.CheckInput(inputKey, currentProgress);
 
-        if (isHit)
+        if (!isHit)
         {
-            if (inputAudioSource && clip) inputAudioSource.PlayOneShot(clip);
-        }
-        else
-        {
-            // HANYA tambah gauge jika benar-benar sedang USER turn
-            if (monster.currentState == MonsterLogic.MonsterState.USER)
-            {
-                GlobalData.gauge += GlobalData.SMALL_FAIL;
-                if (inputAudioSource && soundMiss) inputAudioSource.PlayOneShot(soundMiss);
-                Debug.Log("MISS! Gauge: " + GlobalData.gauge);
-            }
+            if (inputAudioSource && soundMiss) inputAudioSource.PlayOneShot(soundMiss);
+
+            GlobalData.gauge += GlobalData.SMALL_FAIL;
+            Debug.Log("MISS/SALAH TOMBOL! Gauge: " + GlobalData.gauge);
         }
     }
+
+    #region Visual Juice Logic (Adjustable)
+    private void TriggerPlayerBounce()
+    {
+        Transform target = (playerSpriteTransform != null) ? playerSpriteTransform : transform;
+
+        if (_bounceCoroutine != null) StopCoroutine(_bounceCoroutine);
+        _bounceCoroutine = StartCoroutine(DoBounce(target));
+    }
+
+    IEnumerator DoBounce(Transform target)
+    {
+        // Tahap 1: Squash (Gepeng sesuai Vector3 di Inspector)
+        target.localScale = squashScale;
+        yield return new WaitForSeconds(bounceSpeed);
+
+        // Tahap 2: Stretch (Lonjong sesuai Vector3 di Inspector)
+        target.localScale = stretchScale;
+        yield return new WaitForSeconds(bounceSpeed);
+
+        // Tahap 3: Kembali ke Original
+        target.localScale = _originalScale;
+    }
+    #endregion
 }
