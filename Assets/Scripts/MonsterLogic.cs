@@ -3,7 +3,8 @@ using UnityEngine;
 public class MonsterLogic : MonoBehaviour
 {
     #region Data Structures
-    public enum MonsterState { WAIT, DEMO, SIGNAL, USER }
+    // SIGNAL dihapus untuk mendukung Unified Timeline
+    public enum MonsterState { WAIT, USER }
     public MonsterState currentState = MonsterState.WAIT;
     #endregion
 
@@ -38,7 +39,7 @@ public class MonsterLogic : MonoBehaviour
 
     [Header("Pattern Data")]
     public string[] command;
-    public int signalDuration = 2;
+    // signalDuration dihapus karena tidak ada jeda cue
     private int _score = 0;
     private int _totalNotes = 0;
 
@@ -48,7 +49,7 @@ public class MonsterLogic : MonoBehaviour
     public AudioClip pattern2Sound;
     public AudioClip pattern3Sound;
     public AudioClip pattern4Sound;
-    public AudioClip cueSound;
+    // cueSound dihapus
     #endregion
 
     #region Unity Lifecycle
@@ -83,10 +84,9 @@ public class MonsterLogic : MonoBehaviour
 
     void HandleVisuals()
     {
-        // UPDATE: Kedipan sekarang aktif di fase DEMO, SIGNAL, dan USER
-        if (currentState == MonsterState.DEMO || currentState == MonsterState.SIGNAL || currentState == MonsterState.USER)
+        // Kedipan aktif saat fase USER (saat musik dan kursor berjalan)
+        if (currentState == MonsterState.USER)
         {
-            // Smooth Sinusoidal Fade
             float lerp = (Mathf.Sin(Time.time * flashSpeed) + 1.0f) / 2.0f;
             _sr.color = Color.Lerp(_originalColor, highlightColor, lerp);
         }
@@ -104,23 +104,18 @@ public class MonsterLogic : MonoBehaviour
     #region Core Logic: Pattern & Rhythm
     void InitializePattern()
     {
-        if (monsterType == "C")
+        patternId = Random.Range(1, 5);
+
+        switch (patternId)
         {
-            patternId = 4;
-            command = new string[] { "Y", "-", "-", "-", "-", "-" };
-            signalDuration = 2;
-        }
-        else
-        {
-            patternId = Random.Range(1, 4);
-            if (patternId == 1) command = new string[] { "A", "-", "A", "-", "A", "-" };
-            else if (patternId == 2) command = new string[] { "A", "-", "-", "A", "A", "-" };
-            else if (patternId == 3) command = new string[] { "A", "A", "-", "A", "A", "-" };
-            signalDuration = 2;
+            case 1: command = new string[] { "A", "-", "BA", "BA", "BA", "-" }; break;
+            case 2: command = new string[] { "A", "-", "A", "-", "BA", "BA" }; break;
+            case 3: command = new string[] { "A", "-", "BY", "BY", "A", "-" }; break;
+            case 4: command = new string[] { "A", "-", "-", "BY", "BY", "-" }; break;
         }
 
         _totalNotes = 0;
-        foreach (string s in command) if (s != "-") _totalNotes++;
+        foreach (string s in command) if (s.StartsWith("B")) _totalNotes++;
         _hitRegistered = new bool[command.Length];
     }
 
@@ -132,13 +127,19 @@ public class MonsterLogic : MonoBehaviour
             _score = 0;
             for (int i = 0; i < _hitRegistered.Length; i++) _hitRegistered[i] = false;
 
-            currentState = MonsterState.DEMO;
+            // Langsung ke USER: Kursor jalan, Musik bunyi, Player sudah bisa input
+            currentState = MonsterState.USER;
             beatCounter = 0;
 
             TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-            if (tc != null) tc.SpawnPattern(command);
+            if (tc != null)
+            {
+                tc.SpawnPattern(command);
+                tc.StartManualMovement(1.5f); // Durasi kursor (6 beat)
+            }
 
             PlayVoice();
+            SetPlayerInput(true);
         }
     }
 
@@ -156,20 +157,8 @@ public class MonsterLogic : MonoBehaviour
     {
         switch (currentState)
         {
-            case MonsterState.DEMO:
-                if (beatCounter >= 6) { currentState = MonsterState.SIGNAL; beatCounter = 0; if (cueSound != null) monsterVoice.PlayOneShot(cueSound); }
-                break;
-            case MonsterState.SIGNAL:
-                if (beatCounter >= signalDuration)
-                {
-                    currentState = MonsterState.USER;
-                    beatCounter = 0;
-                    SetPlayerInput(true);
-                    TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
-                    if (tc != null) tc.StartManualMovement(1.5f);
-                }
-                break;
             case MonsterState.USER:
+                // Jika sudah melewati 6 beat (satu putaran bar)
                 if (beatCounter >= 6)
                 {
                     SetPlayerInput(false);
@@ -186,19 +175,20 @@ public class MonsterLogic : MonoBehaviour
     #region Input & Audio Helpers
     public bool CheckInput(string inputKey, float progress)
     {
-        if (isDefeated || currentState != MonsterState.USER) return true;
+        if (isDefeated || currentState != MonsterState.USER) return false;
 
         float beatInterval = 1f / command.Length;
         for (int i = 0; i < command.Length; i++)
         {
-            if (command[i] == "-" || _hitRegistered[i]) continue;
+            string cmd = command[i];
+            if (!cmd.StartsWith("B") || _hitRegistered[i]) continue;
 
             float targetProgress = i * beatInterval;
             float currentTolerance = (i == 0) ? beatTolerance + 0.05f : beatTolerance;
 
             if (progress >= (targetProgress - currentTolerance) && progress <= (targetProgress + currentTolerance))
             {
-                if (command[i] == inputKey)
+                if ((cmd == "BA" && inputKey == "A") || (cmd == "BY" && inputKey == "Y"))
                 {
                     _hitRegistered[i] = true;
                     _score++;

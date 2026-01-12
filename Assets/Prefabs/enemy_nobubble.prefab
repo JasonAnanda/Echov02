@@ -104,15 +104,17 @@ MonoBehaviour:
   speed: 2
   startTriggerX: 0
   bounceHeight: 0.3
+  highlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  flashSpeed: 15
   beatCounter: 0
+  isDefeated: 0
+  beatTolerance: 0.15
   command: []
-  signalDuration: 2
   monsterVoice: {fileID: 1619933135898679513}
-  pattern1Sound: {fileID: 8300000, guid: 1e1d2d59e540dcf43a35cc4812ef276c, type: 3}
-  pattern2Sound: {fileID: 8300000, guid: ad795278c8aa41a4caac0ad188cf8f76, type: 3}
-  pattern3Sound: {fileID: 8300000, guid: ec3bab94d1643a745b9e5a372854ae79, type: 3}
-  pattern4Sound: {fileID: 8300000, guid: 64da8ef60e456764b9cc3b6e71b7cdb4, type: 3}
-  cueSound: {fileID: 8300000, guid: bed570e5c19745f40a34a782146c775f, type: 3}
+  pattern1Sound: {fileID: 8300000, guid: 588036366649e4e48af03b962ded3f2e, type: 3}
+  pattern2Sound: {fileID: 8300000, guid: 66084deafb19c62498e87eb4ca52447f, type: 3}
+  pattern3Sound: {fileID: 8300000, guid: 1fc0cd275b41a8842b10046b204ce5c4, type: 3}
+  pattern4Sound: {fileID: 8300000, guid: 03cc90f6902a4384c873d005b97badec, type: 3}
 --- !u!82 &1619933135898679513
 AudioSource:
   m_ObjectHideFlags: 0
