@@ -32,7 +32,7 @@ public class MonsterLogic : MonoBehaviour
     public int beatCounter = 0;
     private bool _hasStarted = false;
     public bool isDefeated = false;
-    private float _startTime; // Penting untuk deteksi durasi
+    private float _startTime;
 
     [Header("Rhythm Tolerance Settings")]
     public float beatTolerance = 0.15f;
@@ -68,10 +68,9 @@ public class MonsterLogic : MonoBehaviour
         HandleMovement();
         HandleVisuals();
 
-        // FIX: Pastikan input tidak mati sebelum kursor sampai ujung (2 detik)
         if (_hasStarted && currentState == MonsterState.USER)
         {
-            if (Time.time - _startTime >= 2.1f) // Toleransi sedikit agar beat ke-4 tetap bisa dipukul
+            if (Time.time - _startTime >= 4.1f)
             {
                 EndSequence();
             }
@@ -133,7 +132,7 @@ public class MonsterLogic : MonoBehaviour
         if (!_hasStarted && !isDefeated)
         {
             _hasStarted = true;
-            _startTime = Time.time; // Catat waktu mulai di sini
+            _startTime = Time.time;
             _score = 0;
             for (int i = 0; i < _hitRegistered.Length; i++) _hitRegistered[i] = false;
 
@@ -155,8 +154,6 @@ public class MonsterLogic : MonoBehaviour
     void UpdateMonsterBeat(int systemBeat)
     {
         if (systemBeat == 0) _moveState = (_moveState == 1) ? 0 : 1;
-        // JANGAN tambah beatCounter di sini untuk mematikan input, 
-        // biarkan Update() yang menangani durasi 2 detik agar kursor sampai ujung.
     }
 
     void EndSequence()
@@ -176,15 +173,21 @@ public class MonsterLogic : MonoBehaviour
 
         TimelineController tc = Object.FindAnyObjectByType<TimelineController>();
         float offsetBonus = 0;
+
         if (tc != null)
         {
-            offsetBonus = tc.visualOffset / 2000f;
+            // UPDATE: Menghitung total lebar lintasan kursor (dinamis)
+            float totalWidth = Mathf.Abs(tc.cursorEndX - tc.cursorStartX);
+
+            // UPDATE: Konversi visualOffset menjadi nilai progress (0-1) secara akurat
+            offsetBonus = tc.visualOffset / totalWidth;
         }
 
         for (int i = 0; i < command.Length; i++)
         {
             if (command[i] != "B" || _hitRegistered[i]) continue;
 
+            // Target hit sekarang sinkron dengan posisi visual ikon yang sudah digeser
             float targetProgress = (timingBeat[i] / 4.0f) + offsetBonus;
             float distance = Mathf.Abs(progress - targetProgress);
 

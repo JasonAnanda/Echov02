@@ -17,15 +17,15 @@ public class TimelineController : MonoBehaviour
     public float cursorStartX = -1000f;
     public float cursorEndX = 1000f;
 
-    [Tooltip("Jika diisi 0, maka akan otomatis menghitung berdasarkan BPM 120 untuk 4 Beat (2 Detik)")]
-    public float cursorDuration = 0f;
+    [Tooltip("Jika diisi 0, maka akan otomatis menghitung berdasarkan BPM Musik")]
+    public float cursorDuration = 4.0f;
 
     [Header("Visual Alignment & Balance")]
     public float noteYOffset = 0f;
     public float cursorYOffset = -442f;
 
-    [Tooltip("Gunakan nilai positif (misal: 30-60) untuk menggeser Diamond lebih ke kanan agar balance di tengah")]
-    public float visualOffset = 80f;
+    [Tooltip("Gunakan nilai positif untuk menggeser Diamond lebih ke kanan")]
+    public float visualOffset = 130f;
     #endregion
 
     #region 3. INTERNAL DATA & STATE
@@ -82,6 +82,7 @@ public class TimelineController : MonoBehaviour
         ResetCursor();
     }
 
+    // UPDATE: Logika Spawn yang diperbaiki untuk memastikan Diamond 0f terlihat
     public void SpawnPatternRhythmDoctor(float[] beatTimings, string[] types)
     {
         ClearTimeline();
@@ -92,42 +93,28 @@ public class TimelineController : MonoBehaviour
         for (int i = 0; i < beatTimings.Length; i++)
         {
             GameObject prefabToSpawn = (types[i] == "A") ? prefabA : prefabY;
-
             if (prefabToSpawn != null)
             {
                 GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
                 RectTransform rt = note.GetComponent<RectTransform>();
 
-                // POSISI: Ditambah visualOffset agar bergeser ke kanan
+                // FIX 1: Memaksa Anchor dan Pivot ke tengah agar posisi absolut konsisten
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.localScale = Vector3.one;
+
+                // FIX 2: Perhitungan posisi menggunakan visualOffset yang sudah disesuaikan
                 float posX = cursorStartX + (beatTimings[i] * unitPerBeat) + visualOffset;
+
+                // Set posisi UI Diamond
                 rt.anchoredPosition = new Vector2(posX, noteYOffset);
 
                 _activeNotes.Add(note);
-                _noteSlots.Add(i, note);
-            }
-        }
-    }
 
-    public void SpawnPattern(string[] command)
-    {
-        ClearTimeline();
-        float totalWidth = Mathf.Abs(cursorEndX - cursorStartX);
-        float step = totalWidth / command.Length;
-
-        for (int i = 0; i < command.Length; i++)
-        {
-            GameObject prefabToSpawn = null;
-            if (command[i] == "BA" || command[i] == "A") prefabToSpawn = prefabA;
-            else if (command[i] == "BY" || command[i] == "B") prefabToSpawn = prefabY;
-
-            if (prefabToSpawn != null)
-            {
-                GameObject note = Instantiate(prefabToSpawn, noteSpawnPoint);
-                RectTransform rt = note.GetComponent<RectTransform>();
-                float posX = cursorStartX + (i * step) + (step / 2f) + visualOffset;
-                rt.anchoredPosition = new Vector2(posX, noteYOffset);
-                _activeNotes.Add(note);
-                _noteSlots.Add(i, note);
+                // Simpan ke slot untuk deteksi hit
+                if (!_noteSlots.ContainsKey(i))
+                    _noteSlots.Add(i, note);
             }
         }
     }
@@ -153,13 +140,13 @@ public class TimelineController : MonoBehaviour
     {
         _startTime = Time.time;
 
-        if (overrideDuration <= 0 && cursorDuration <= 0)
+        if (overrideDuration <= 0)
         {
-            _duration = 2.0f;
+            _duration = (cursorDuration <= 0) ? 2.0f : cursorDuration;
         }
         else
         {
-            _duration = (overrideDuration > 0) ? overrideDuration : cursorDuration;
+            _duration = overrideDuration;
         }
 
         _isMoving = true;
