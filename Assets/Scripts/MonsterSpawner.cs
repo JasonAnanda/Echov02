@@ -10,7 +10,7 @@ public class MonsterSpawner : MonoBehaviour
     public Transform spawnPoint;
 
     [Header("Interval Settings")]
-    public float intervalA = 8f;   // Monster A setiap 8 detik
+    public float intervalA = 12f;   // Monster A setiap 8 detik
     public float intervalC = 20f;  // Monster C lebih jarang (contoh: 20 detik)
 
     [Header("Height Settings")]
