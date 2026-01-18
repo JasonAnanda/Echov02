@@ -821,7 +821,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   monsterAPrefab: {fileID: 155006947008777541, guid: 679f42ee99effc242a4091b3d1b7707b, type: 3}
-  monsterCPrefab: {fileID: 155006947008777541, guid: 1d97b8eace6b5bc4faef9214f2571369, type: 3}
+  monsterCPrefab: {fileID: 0}
   spawnPoint: {fileID: 778082797}
   intervalA: 8
   intervalC: 20
@@ -1170,7 +1170,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inputAudioSource: {fileID: 1161917397}
-  soundA: {fileID: 8300000, guid: 33439d5ce42a4df46afd92b41f1c748c, type: 3}
+  soundA: {fileID: 8300000, guid: b7a323ae6e865ef4ba122e1defbd9d53, type: 3}
   soundY: {fileID: 8300000, guid: 30e1bf99e81c41e47842d7cb3d4fc1e4, type: 3}
   soundMiss: {fileID: 8300000, guid: 6c36f621d33379c428b555f04c3083fd, type: 3}
   playerSpriteTransform: {fileID: 0}
@@ -1328,7 +1328,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: 1d63d436ec764fe4a9a184f7a01b0704, type: 3}
   m_PlayOnAwake: 0
-  m_Volume: 0
+  m_Volume: 0.44
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -1633,7 +1633,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   systemBPM: 240
   tickBPM: 120
-  beatTolerance: 0.12
+  beatTolerance: 0.1
   bgmSource: {fileID: 1616531813}
   tickSource: {fileID: 1616531812}
 --- !u!1 &1695156665
@@ -1871,9 +1871,10 @@ MonoBehaviour:
   canvasTimeline: {fileID: 1921824472}
   cursorStartX: -1000
   cursorEndX: 1000
-  cursorDuration: 0
+  cursorDuration: 2
   noteYOffset: 0
   cursorYOffset: -442
+  visualOffset: 80
 --- !u!1 &2039565006
 GameObject:
   m_ObjectHideFlags: 0
